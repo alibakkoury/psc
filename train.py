@@ -86,9 +86,9 @@ def train_gmm(opt, train_loader, model, board):
             
         if (step+1) % opt.display_count == 0:
             board_add_images(board, 'combine', visuals, step+1)
-            board.add_scalar('metric', lossL1.item(), step+1)
-            board.add_scalar('metric', lossPSC.item(), step+1)
-            board.add_scalar('metric', loss.item(), step+1)
+            board.add_scalar('lossL1', lossL1.item(), step+1)
+            board.add_scalar('lossPSC', lossPSC.item(), step+1)
+            board.add_scalar('loss', loss.item(), step+1)
             t = time.time() - iter_start_time
             print('step: %8d, time: %.3f, lossL1: %4f' % (step+1, t, lossL1.item()), flush=True)
             print('step: %8d, time: %.3f, lossPSC: %4f' % (step+1, t, lossPSC.item()), flush=True)
