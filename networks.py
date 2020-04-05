@@ -407,8 +407,10 @@ class PSCLoss(nn.Module):
         #self.weights = [1.0/4, 1.0]
 
     def forward(self, x, y):
-        x = (x[70:240][30:162]).float()
-        y = (y[70:240][30:162]).float()
+        for t in x : 
+            t = (t[70:240][30:162]).float()
+        for t in y : 
+            t = (t[70:240][30:162]).float()
         loss = self.criterion(x,y)
         return loss
 
