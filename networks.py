@@ -400,6 +400,18 @@ class VGGLoss(nn.Module):
             loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())
         return loss
 
+class PSCLoss(nn.Module):
+    def __init__(self, layids = None):
+        super(PSCLoss, self).__init__()
+        self.criterion = nn.L1Loss()
+        #self.weights = [1.0/4, 1.0]
+
+    def forward(self, x, y):
+        x = (x[70:240][30:162]).float()
+        y = (y[70:240][30:162]).float()
+        loss = self.criterion(x,y)
+        return loss
+
 class GMM(nn.Module):
     """ Geometric Matching Module
     """

@@ -7,7 +7,7 @@ import argparse
 import os
 import time
 from cp_dataset import CPDataset, CPDataLoader
-from networks import GMM, UnetGenerator, VGGLoss, load_checkpoint, save_checkpoint
+from networks import GMM, UnetGenerator, VGGLoss, load_checkpoint, save_checkpoint, PSCLoss
 
 from tensorboardX import SummaryWriter
 from visualization import board_add_image, board_add_images
@@ -47,6 +47,7 @@ def train_gmm(opt, train_loader, model, board):
 
     # criterion
     criterionL1 = nn.L1Loss()
+    criterionPSC = PSCLoss()
     
     # optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr, betas=(0.5, 0.999))
@@ -76,7 +77,9 @@ def train_gmm(opt, train_loader, model, board):
                    [c, warped_cloth, im_c], 
                    [warped_grid, (warped_cloth+im)*0.5, im]]
         
-        loss = criterionL1(warped_cloth, im_c)    
+        lossL1 = criterionL1(warped_cloth, im_c) 
+        lossPSC = criterionPSC(warped_cloth,im_c)  
+        loss = lossL1 + lossPSC 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
