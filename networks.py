@@ -406,13 +406,14 @@ class PSCLoss(nn.Module):
         self.criterion = nn.L1Loss()
         #self.weights = [1.0/4, 1.0]
         
-
     def forward(self, x, y):
-        for t in x :
-            t = t[140:190][20:170].float()
-        for t in y :
-            t = t[140:190][20:170].float()   
-        loss = self.criterion(x,y)
+        xcop = x.float()
+        ycop = y.float()
+        for t in xcop :
+            t = t[140:190,20:170,:].float()
+        for t in ycop :
+            t = t[140:190,20:170,:].float()   
+        loss = self.criterion(xcop,ycop)
         return loss
 
 class GMM(nn.Module):
