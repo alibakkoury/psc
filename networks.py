@@ -405,12 +405,11 @@ class PSCLoss(nn.Module):
         super(PSCLoss, self).__init__()
         self.criterion = nn.L1Loss()
         #self.weights = [1.0/4, 1.0]
+        
 
     def forward(self, x, y):
-        for t in x : 
-            t = (t[70:240][30:162]).float()
-        for t in y : 
-            t = (t[70:240][30:162]).float()
+        x = (x[100:190][20:170]).float()
+        y = (y[100:190][20:170]).float()
         loss = self.criterion(x,y)
         return loss
 
