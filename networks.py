@@ -408,8 +408,10 @@ class PSCLoss(nn.Module):
         
 
     def forward(self, x, y):
-        x = (x[100:190][20:170]).float()
-        y = (y[100:190][20:170]).float()
+        for t in x :
+            t = t[140:190][20:170].float()
+        for t in y :
+            t = t[140:190][20:170].float()   
         loss = self.criterion(x,y)
         return loss
 
