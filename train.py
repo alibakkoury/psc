@@ -92,6 +92,7 @@ def train_gmm(opt, train_loader, model, board):
             t = time.time() - iter_start_time
             print(warped_cloth.type())
             print(im_c.type())
+            print(warped_cloth.size())
             print('step: %8d, time: %.3f, lossL1: %4f' % (step+1, t, lossL1.item()), flush=True)
             print('step: %8d, time: %.3f, lossPSC: %4f' % (step+1, t, lossPSC.item()), flush=True)
             print('step: %8d, time: %.3f, loss: %4f' % (step+1, t, loss.item()), flush=True)
