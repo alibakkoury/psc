@@ -415,16 +415,19 @@ class PSCLoss(nn.Module):
     def __init__(self, layids = None):
         super(PSCLoss, self).__init__()
         self.criterion = nn.L1Loss()
+        self.pixels = get_blank_pixels
         #self.weights = [1.0/4, 1.0]
         
     def forward(self, x, y):
-        xcop = x.float()
-        ycop = y.float()
-        for t in xcop :
-            t = t[140:190,20:170,:].float()
-        for t in ycop :
-            t = t[140:190,20:170,:].float()   
-        loss = self.criterion(xcop,ycop)
+        loss = 0
+        for i in range(4):
+            t = x[i]
+            tp = y[i]
+            res = 0
+            n = len(self.pixels(t))
+            for k , l in self.pixels(t):
+                res+=self.criterion(t[k][l],tp[k][l])
+            loss+=res/n
         return loss
 
 class GMM(nn.Module):
