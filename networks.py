@@ -400,6 +400,17 @@ class VGGLoss(nn.Module):
             loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())
         return loss
 
+def get_blank_pixels(t):
+    code_blanc = torch.tensor([255,255,255])
+    res = []
+    n = t.size()[0]
+    m = t.size()[1]
+    for i in range(n):
+        for j in range(m):
+            if (t[i][j] == code_blanc).all():
+                res.append((i,j))
+    return res
+
 class PSCLoss(nn.Module):
     def __init__(self, layids = None):
         super(PSCLoss, self).__init__()
