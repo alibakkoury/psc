@@ -401,13 +401,17 @@ class VGGLoss(nn.Module):
         return loss
 
 def get_blank_pixels(t):
-    code_blanc = torch.tensor([255,255,255])
-    res = []
-    n = t.size()[0]
-    m = t.size()[1]
+    code_blanc = torch.tensor([1,1,1]).float().cuda()
+    res=[]
+    n = t.size()[1]
+    m = t.size()[2]
     for i in range(n):
         for j in range(m):
-            if (t[i][j] == code_blanc).all():
+            indi = torch.tensor([i]).cuda()
+            indj = torch.tensor([j]).cuda()
+            code = torch.index_select(t , 1 , indi)
+            code = torch.index_select(code , 2 , indj)
+            if ((code == code_blanc).all()):
                 res.append((i,j))
     return res
 
@@ -422,12 +426,21 @@ class PSCLoss(nn.Module):
         loss = 0
         for i in range(4):
             t = x[i]
+            print(t.size())
             tp = y[i]
             res = 0
-            n = len(self.pixels(t))
-            for k , l in self.pixels(t):
-                res+=self.criterion(t[k][l],tp[k][l])
+            pix = self.pixels(t)
+            n = len(pix)
+            for k , l in pix:
+                indi = torch.tensor([k]).cuda()
+                indj = torch.tensor([l]).cuda()
+                codet = torch.index_select(t , 1 , indi)
+                codet = torch.index_select(codet , 2 , indj)
+                codetp = torch.index_select(tp , 1 , indi)
+                codetp = torch.index_select(codetp , 2 , indj)
+                res+=self.criterion(codet,codetp)
             loss+=res/n
+        print("Himmiche")
         return loss
 
 class GMM(nn.Module):
