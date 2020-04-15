@@ -400,26 +400,31 @@ class VGGLoss(nn.Module):
             loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())
         return loss
 
-def get_blank_pixels(t):
+def calculate_loss(x,y,criterion):
     code_blanc = torch.tensor([1,1,1]).float().cuda()
-    res=[]
-    n = t.size()[1]
-    m = t.size()[2]
+    n = x.size()[1]
+    m = x.size()[2]
+    res = 0
+    count = 0
+    
     for i in range(n):
         for j in range(m):
             indi = torch.tensor([i]).cuda()
             indj = torch.tensor([j]).cuda()
-            code = torch.index_select(t , 1 , indi)
-            code = torch.index_select(code , 2 , indj)
-            if ((code == code_blanc).all()):
-                res.append((i,j))
-    return res
+            codey = torch.index_select(y , 1 , indi)
+            codey = torch.index_select(codey , 2 , indj)
+            if ((codey == code_blanc).all()):
+                codex = torch.index_select(x , 1 , indi)
+                codex = torch.index_select(codex , 2 , indj)
+                res += criterion(codex , codey)
+                count+=1
+    return res/count
 
 class PSCLoss(nn.Module):
     def __init__(self, layids = None):
         super(PSCLoss, self).__init__()
         self.criterion = nn.L1Loss()
-        self.pixels = get_blank_pixels
+        self.calc = calculate_loss
         #self.weights = [1.0/4, 1.0]
         
     def forward(self, x, y):
@@ -428,19 +433,8 @@ class PSCLoss(nn.Module):
             t = x[i]
             print(t.size())
             tp = y[i]
-            res = 0
-            pix = self.pixels(t)
-            n = len(pix)
-            for k , l in pix:
-                indi = torch.tensor([k]).cuda()
-                indj = torch.tensor([l]).cuda()
-                codet = torch.index_select(t , 1 , indi)
-                codet = torch.index_select(codet , 2 , indj)
-                codetp = torch.index_select(tp , 1 , indi)
-                codetp = torch.index_select(codetp , 2 , indj)
-                res+=self.criterion(codet,codetp)
-            loss+=res/n
-        print("Himmiche")
+            res = self.calc(t , tp , self.criterion)     
+            loss+=res
         return loss
 
 class GMM(nn.Module):
