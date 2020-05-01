@@ -10,6 +10,23 @@ import os.path as osp
 import numpy as np
 import json
 
+
+def get_blank(t):
+    code_blanc = torch.tensor([1,1,1]).float().cuda()
+    n = t.size()[1]
+    m = t.size()[2]
+    res = []
+    for i in range(n):
+        for j in range(n):
+            indi = torch.tensor([i]).cuda()
+            indj = torch.tensor([j]).cuda()
+            code = torch.index_select(t , 1 , indi).cuda()
+            if ((code == code_blanc).all()):
+                res.append((i,j))
+    res = torch.tensor(res)
+    return res
+    
+
 class CPDataset(data.Dataset):
     """Dataset for CP-VTON.
     """
@@ -91,6 +108,10 @@ class CPDataset(data.Dataset):
         im_c = im * pcm + (1 - pcm) # [-1,1], fill 1 for other parts
         im_h = im * phead - (1 - phead) # [-1,1], fill 0 for other parts
 
+        #blank
+
+        blank = get_blank(im_c)
+
         # load pose points
         pose_name = im_name.replace('.jpg', '_keypoints.json')
         with open(osp.join(self.data_path, 'pose', pose_name), 'r') as f:
@@ -139,6 +160,7 @@ class CPDataset(data.Dataset):
             'head': im_h,           # for visualization
             'pose_image': im_pose,  # for visualization
             'grid_image': im_g,     # for visualization
+            'blank' : blank,        # White pixels in the ground truth
             }
 
         return result

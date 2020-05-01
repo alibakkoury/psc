@@ -67,6 +67,7 @@ def train_gmm(opt, train_loader, model, board):
         cm = inputs['cloth_mask'].cuda()
         im_c =  inputs['parse_cloth'].cuda()
         im_g = inputs['grid_image'].cuda()
+        blank = inputs['blank'].cuda()
             
         grid, theta = model(agnostic, c)
         warped_cloth = F.grid_sample(c, grid, padding_mode='border')
@@ -78,7 +79,7 @@ def train_gmm(opt, train_loader, model, board):
                    [warped_grid, (warped_cloth+im)*0.5, im]]
         
         lossL1 = criterionL1(warped_cloth, im_c) 
-        lossPSC = criterionPSC(warped_cloth,im_c)  
+        lossPSC = criterionPSC(warped_cloth, im_c, blank) 
         print("LossL1",lossL1)
         print("LossPSC",lossPSC)
         loss = lossL1 + lossPSC 

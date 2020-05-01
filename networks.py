@@ -406,35 +406,43 @@ def calculate_loss(x,y,criterion):
     m = x.size()[2]
     res = 0
     count = 0
-    
+    print("calcul commencé")
     for i in range(n):
         for j in range(m):
             indi = torch.tensor([i]).cuda()
             indj = torch.tensor([j]).cuda()
-            codey = torch.index_select(y , 1 , indi)
-            codey = torch.index_select(codey , 2 , indj)
+            codey = torch.index_select(y , 1 , indi).cuda()
+            codey = torch.index_select(codey , 2 , indj).cuda()
             if ((codey == code_blanc).all()):
-                codex = torch.index_select(x , 1 , indi)
-                codex = torch.index_select(codex , 2 , indj)
+                codex = torch.index_select(x , 1 , indi).cuda()
+                codex = torch.index_select(codex , 2 , indj).cuda()
                 res += criterion(codex , codey)
                 count+=1
+    print("calcul fini")
     return res/count
 
 class PSCLoss(nn.Module):
     def __init__(self, layids = None):
         super(PSCLoss, self).__init__()
         self.criterion = nn.L1Loss()
-        self.calc = calculate_loss
+        #self.calc = calculate_loss
         #self.weights = [1.0/4, 1.0]
         
-    def forward(self, x, y):
+    def forward(self, x, y, blank):
         loss = 0
+        print('Début du calcul')
         for i in range(4):
             t = x[i]
+            b = blank[i]
             print(t.size())
             tp = y[i]
-            res = self.calc(t , tp , self.criterion)     
-            loss+=res
+            for j , k in b :
+                codet = torch.index_select(t , 1 , indi).cuda()
+                codet = torch.index_select(codet , 2 , indj).cuda()
+                codetp = torch.index_select(tp , 1 , indi).cuda()
+                codetp = torch.index_select(codetp , 2 , indj).cuda()
+                loss += self.criterion(codet,codetp)
+        print('Fin du calcul')
         return loss
 
 class GMM(nn.Module):
