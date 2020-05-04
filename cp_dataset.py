@@ -11,22 +11,6 @@ import numpy as np
 import json
 
 
-def get_blank(t):
-    code_blanc = torch.tensor([1,1,1]).float().cuda()
-    n = t.size()[1]
-    m = t.size()[2]
-    res = []
-    for i in range(n):
-        for j in range(n):
-            indi = torch.tensor([i]).cuda()
-            indj = torch.tensor([j]).cuda()
-            code = torch.index_select(t , 1 , indi).cuda()
-            if ((code == code_blanc).all()):
-                res.append((i,j))
-    res = torch.tensor(res)
-    return res
-    
-
 class CPDataset(data.Dataset):
     """Dataset for CP-VTON.
     """
@@ -109,8 +93,26 @@ class CPDataset(data.Dataset):
         im_h = im * phead - (1 - phead) # [-1,1], fill 0 for other parts
 
         #blank
+        
+        def get_blank(t):
+            code_blanc = torch.tensor([1,1,1]).float()
+            n = t.size()[1]
+            m = t.size()[2]
+            res = []
+            for i in range(n):
+                for j in range(m):
+                    indi = torch.tensor([i])
+                    indj = torch.tensor([j])
+                    code = torch.index_select(t , 1 , indi)
+                    code = torch.index_select(code , 2 , indj)
+                    if ((code == code_blanc).all()):
+                       res.append((i,j))
+            res = torch.tensor(res)
+            return res
 
+        print('début')
         blank = get_blank(im_c)
+        print('fin')
 
         # load pose points
         pose_name = im_name.replace('.jpg', '_keypoints.json')
