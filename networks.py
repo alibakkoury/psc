@@ -430,19 +430,10 @@ class PSCLoss(nn.Module):
         
     def forward(self, x, y, blank):
         loss = 0
-        print('Début du calcul')
-        for i in range(4):
-            t = x[i]
-            b = blank[i]
-            print(t.size())
-            tp = y[i]
-            for j , k in b :
-                codet = torch.index_select(t , 1 , indi).cuda()
-                codet = torch.index_select(codet , 2 , indj).cuda()
-                codetp = torch.index_select(tp , 1 , indi).cuda()
-                codetp = torch.index_select(codetp , 2 , indj).cuda()
-                loss += self.criterion(codet,codetp)
-        print('Fin du calcul')
+        n = len(blank[0])
+        xmodif=torch.mul(x,blank)
+        ymodif=torch.mul(y,blank)
+        loss = nn.L1Loss(xmodif,ymodif)
         return loss
 
 class GMM(nn.Module):

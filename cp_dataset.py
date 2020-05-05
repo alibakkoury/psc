@@ -98,16 +98,17 @@ class CPDataset(data.Dataset):
             code_blanc = torch.tensor([1,1,1]).float()
             n = t.size()[1]
             m = t.size()[2]
-            res = []
+            blank = np.ones((n,m))
+            #print(blank)
             for i in range(n):
-                for j in range(m):
+                 for j in range(m):
                     indi = torch.tensor([i])
                     indj = torch.tensor([j])
                     code = torch.index_select(t , 1 , indi)
                     code = torch.index_select(code , 2 , indj)
-                    if ((code == code_blanc).all()):
-                       res.append((i,j))
-            res = torch.tensor(res)
+                    if (not(code == code_blanc).all()):
+                        blank[i][j] = 0
+            res = torch.tensor(blank)
             return res
 
         print('début')
