@@ -28,12 +28,12 @@ def download(url, filename, cookies=None):
 
 
 drive_request = requests.get(
-    'https://drive.google.com/uc?export=download&confirm=CONFIRM&id=1MxCUvKxejnwWnoZ-KoCyMCXo3TLhRuTo')
+    'https://drive.google.com/uc?export=download&confirm=CONFIRM&id=13xrpZRd7nK8wT6F_b-AfYPiwXqnqGoou')
 confirm_page = drive_request.text
 confirmation_code = re.findall('confirm=(.{4})', confirm_page)[0]
 
 print('[*] Downloading data...')
-download('https://drive.google.com/uc?export=download&confirm=CONFIRM&id=1MxCUvKxejnwWnoZ-KoCyMCXo3TLhRuTo'.replace(
+download('https://drive.google.com/uc?export=download&confirm=CONFIRM&id=13xrpZRd7nK8wT6F_b-AfYPiwXqnqGoou'.replace(
     'CONFIRM', confirmation_code), 'data/viton_resize.tar.gz', cookies=drive_request.cookies)
 
 tarfile.open("data/viton_resize.tar.gz").extractall(path='data/')

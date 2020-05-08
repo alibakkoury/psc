@@ -430,10 +430,9 @@ class PSCLoss(nn.Module):
         
     def forward(self, x, y, blank):
         blank = blank.cuda()
-        n = len(blank[0])
         xmodif=torch.mul(x,blank).cuda()
         ymodif=torch.mul(y,blank).cuda()
-        loss = nn.L1Loss(xmodif,ymodif)
+        loss =self.criterion(xmodif,ymodif)
         return loss
 
 class GMM(nn.Module):

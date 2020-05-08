@@ -82,7 +82,10 @@ def train_gmm(opt, train_loader, model, board):
         lossPSC = criterionPSC(warped_cloth, im_c, blank) 
         print("LossL1",lossL1)
         print("LossPSC",lossPSC)
-        loss = 0.5*lossL1 + lossPSC 
+        #if (step<3000) :
+            #loss = 0.5*lossL1 + lossPSC
+        #else :
+        loss = lossL1 - lossPSC
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()

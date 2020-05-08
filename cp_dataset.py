@@ -29,6 +29,7 @@ class CPDataset(data.Dataset):
         self.transform = transforms.Compose([  \
                 transforms.ToTensor(),   \
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        self.to_tensor = transforms.ToTensor()
         
         # load data list
         im_names = []
@@ -53,6 +54,7 @@ class CPDataset(data.Dataset):
         if self.stage == 'GMM':
             c = Image.open(osp.join(self.data_path, 'cloth', c_name))
             cm = Image.open(osp.join(self.data_path, 'cloth-mask', c_name))
+            blank = Image.open(osp.join(self.data_path , 'blank' , im_name))
         else:
             c = Image.open(osp.join(self.data_path, 'warp-cloth', c_name))
             cm = Image.open(osp.join(self.data_path, 'warp-mask', c_name))
@@ -92,29 +94,10 @@ class CPDataset(data.Dataset):
         im_c = im * pcm + (1 - pcm) # [-1,1], fill 1 for other parts
         im_h = im * phead - (1 - phead) # [-1,1], fill 0 for other parts
 
-        #blank
+        #blank      
         
-        def get_blank(t):
-            code_blanc = torch.tensor([1,1,1]).float()
-            n = t.size()[1]
-            m = t.size()[2]
-            blank = np.ones((n,m))
-            #print(blank)
-            for i in range(n):
-                 for j in range(m):
-                    indi = torch.tensor([i])
-                    indj = torch.tensor([j])
-                    code = torch.index_select(t , 1 , indi)
-                    code = torch.index_select(code , 2 , indj)
-                    if (not(code == code_blanc).all()):
-                        blank[i][j] = 0
-            res = torch.tensor(blank)
-            return res
-
-        print('début')
-        blank = get_blank(im_c)
-        print('fin')
-
+        blank = self.to_tensor(blank)
+       
         # load pose points
         pose_name = im_name.replace('.jpg', '_keypoints.json')
         with open(osp.join(self.data_path, 'pose', pose_name), 'r') as f:
@@ -163,7 +146,7 @@ class CPDataset(data.Dataset):
             'head': im_h,           # for visualization
             'pose_image': im_pose,  # for visualization
             'grid_image': im_g,     # for visualization
-            'blank' : blank,        # White pixels in the ground truth
+            'blank' : blank,        # White pixels mask in the ground truth
             }
 
         return result
