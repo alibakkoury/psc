@@ -38,8 +38,8 @@ download('https://drive.google.com/uc?export=download&confirm=CONFIRM&id=13xrpZR
 
 tarfile.open("data/viton_resize.tar.gz").extractall(path='data/')
 
-shutil.move('data/viton_resize/test/', 'data/test/')
-shutil.move('data/viton_resize/train/', 'data/train/')
+shutil.move('data/data/test/', 'data/test/')
+shutil.move('data/data/train/', 'data/train/')
 
-os.rmdir('data/viton_resize/')
+os.rmdir('data/data/')
 os.remove('data/viton_resize.tar.gz')

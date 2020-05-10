@@ -7,10 +7,10 @@ import argparse
 import os
 import time
 from cp_dataset import CPDataset, CPDataLoader
-from networks import GMM, UnetGenerator, VGGLoss, load_checkpoint, save_checkpoint, PSCLoss
+from networks import GMM, UnetGenerator, VGGLoss, load_checkpoint, save_checkpoint, PSCLoss, Discriminator, discriminator_train_step, generator_train_step
 
 from tensorboardX import SummaryWriter
-from visualization import board_add_image, board_add_images
+from visualization import board_add_image, board_add_images, save_images
 
 
 def get_opt():
@@ -35,6 +35,7 @@ def get_opt():
     parser.add_argument("--display_count", type=int, default = 20)
     parser.add_argument("--save_count", type=int, default = 100)
     parser.add_argument("--keep_step", type=int, default = 100000)
+    parser.add_argument('--result_dir', type=str, default='result', help='save result infos')
     parser.add_argument("--decay_step", type=int, default = 100000)
     parser.add_argument("--shuffle", action='store_true', help='shuffle input data')
 
@@ -43,21 +44,40 @@ def get_opt():
 
 def train_gmm(opt, train_loader, model, board):
     model.cuda()
+    discriminator = Discriminator()
+    discriminator.cuda()
+
     model.train()
+    discriminator.train()
+
 
     # criterion
+    criterion = nn.BCELoss()
     criterionL1 = nn.L1Loss()
     criterionPSC = PSCLoss()
     
     # optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr, betas=(0.5, 0.999))
+    optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=opt.lr, betas=(0.5, 0.999))
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda = lambda step: 1.0 -
             max(0, step - opt.keep_step) / float(opt.decay_step + 1))
     
+
+    #count = 0
+
+    #base_name = os.path.basename(opt.checkpoint)
+   # save_dir = os.path.join(opt.result_dir, opt.datamode)
+   # if not os.path.exists(save_dir):
+   #     os.makedirs(save_dir)
+   # warp_cloth_dir = os.path.join(save_dir, 'warp-cloth')
+   # if not os.path.exists(warp_cloth_dir):
+    #    os.makedirs(warp_cloth_dir)
+
     for step in range(opt.keep_step + opt.decay_step):
         iter_start_time = time.time()
         inputs = train_loader.next_batch()
-            
+
+        c_names = inputs['c_name']    
         im = inputs['image'].cuda()
         im_pose = inputs['pose_image'].cuda()
         im_h = inputs['head'].cuda()
@@ -74,21 +94,17 @@ def train_gmm(opt, train_loader, model, board):
         warped_mask = F.grid_sample(cm, grid, padding_mode='zeros')
         warped_grid = F.grid_sample(im_g, grid, padding_mode='zeros')
 
+        #if (count < 14222):
+        #    save_images(warped_cloth, c_names, warp_cloth_dir)
+        #    print(warped_cloth.size()[0])
+        #    count+=warped_cloth.size()[0]
+
         visuals = [ [im_h, shape, im_pose], 
                    [c, warped_cloth, im_c], 
                    [warped_grid, (warped_cloth+im)*0.5, im]]
         
-        lossL1 = criterionL1(warped_cloth, im_c) 
-        lossPSC = criterionPSC(warped_cloth, im_c, blank) 
-        print("LossL1",lossL1)
-        print("LossPSC",lossPSC)
-        #if (step<3000) :
-            #loss = 0.5*lossL1 + lossPSC
-        #else :
-        loss = lossL1 - lossPSC
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        discriminator_train_step(opt.batch_size , discriminator, model, optimizer_d, criterion, im_c , agnostic, c)
+        res , loss, lossL1, lossPSC, lossGAN = generator_train_step(opt.batch_size, discriminator, model, optimizer, criterion, criterionL1, criterionPSC, blank, im_c, agnostic, c )
             
         if (step+1) % opt.display_count == 0:
             board_add_images(board, 'combine', visuals, step+1)
@@ -96,10 +112,9 @@ def train_gmm(opt, train_loader, model, board):
             board.add_scalar('lossPSC', lossPSC.item(), step+1)
             board.add_scalar('loss', loss.item(), step+1)
             t = time.time() - iter_start_time
-            print(warped_cloth[0].type())
-            print(warped_cloth[0].size())
             print('step: %8d, time: %.3f, lossL1: %4f' % (step+1, t, lossL1.item()), flush=True)
             print('step: %8d, time: %.3f, lossPSC: %4f' % (step+1, t, lossPSC.item()), flush=True)
+            print('step: %8d, time: %.3f, lossGAN: %4f' % (step+1, t, lossPSC.item()), flush=True)
             print('step: %8d, time: %.3f, loss: %4f' % (step+1, t, loss.item()), flush=True)
 
         if (step+1) % opt.save_count == 0:

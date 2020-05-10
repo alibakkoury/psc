@@ -4,6 +4,8 @@ import torch.nn as nn
 from torch.nn import init
 from torchvision import models
 import os
+import torch.nn.functional as F
+from torch.autograd import Variable
 
 import numpy as np
 
@@ -457,6 +459,81 @@ class GMM(nn.Module):
         theta = self.regression(correlation)
         grid = self.gridGen(theta)
         return grid, theta
+
+class Discriminator(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.activate = nn.Softmax()
+        self.features = nn.Sequential(
+            nn.Conv2d(25,256,11,4,2),
+            nn.ReLU(),   
+            nn.MaxPool2d(2,2),
+            nn.Conv2d(256,512,5,1,2),
+            nn.ReLU(),
+            nn.MaxPool2d(2,2),
+            nn.Conv2d(512,1024,3,1,1),
+            nn.ReLU(),
+            nn.Conv2d(1024,512,3,1,1),
+            nn.ReLU(),
+            nn.Conv2d(512,256,3,1,1),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d(6)
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(256 * 6 * 6, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Linear(4096 , 2),
+        )
+
+    def forward(self , x , cond):
+        x = torch.cat([x,cond],1)
+        x = self.features(x)
+        #x = self.avgpool(x)
+        x = x.view(x.size(0), 256 * 6 * 6)
+        x = self.classifier(x)
+        x = self.activate(x)
+        return x
+
+def discriminator_train_step(batch_size, discriminator, generator, d_optimizer, criterion, real_images, cond , cloth):
+    
+    d_optimizer.zero_grad()
+
+    # train with real images
+    #real_validity = discriminator(real_images, cond)
+    real_validity = torch.index_select(discriminator(real_images, cond) , 1, torch.LongTensor([1]).cuda()).view(4)
+    print(real_validity)
+    real_loss = criterion(real_validity, Variable(torch.ones(batch_size)).cuda())
+    
+    # train with fake images
+    grid , theta = generator(cond , cloth)
+    fake_images = F.grid_sample(cloth, grid, padding_mode='border')
+    fake_validity = torch.index_select(discriminator(fake_images, cond) , 1, torch.LongTensor([1]).cuda()).view(4)
+    fake_loss = criterion(fake_validity, Variable(torch.zeros(batch_size)).cuda())
+    
+    d_loss = real_loss + fake_loss
+    d_loss.backward()
+    d_optimizer.step()
+    return d_loss.data[0]
+
+
+def generator_train_step(batch_size, discriminator, generator, g_optimizer, criterion , lossL1, lossPSC ,blank , real_images, cond , cloth):
+    g_optimizer.zero_grad()
+
+    grid, theta = generator(cond, cloth)
+    fake_images = F.grid_sample(cloth, grid, padding_mode='border')
+    validity = torch.index_select(discriminator(fake_images, cond) , 1, torch.LongTensor([1]).cuda()).view(4)
+    loss_gan = criterion(validity, Variable(torch.ones(batch_size)).cuda())
+    loss_l1 = lossL1(fake_images , real_images )
+    loss_psc = lossPSC(fake_images , real_images , blank)
+    g_loss =  loss_l1 + loss_psc + loss_gan
+    g_loss.backward()
+    g_optimizer.step()
+    return g_loss.data[0] , g_loss , loss_l1 , loss_psc, loss_gan
 
 def save_checkpoint(model, save_path):
     if not os.path.exists(os.path.dirname(save_path)):

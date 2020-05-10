@@ -48,7 +48,7 @@ def save_images(img_tensors, img_names, save_dir):
         tensor = (img_tensor.clone()+1)*0.5 * 255
         tensor = tensor.cpu().clamp(0,255)
 
-        array = tensor.numpy().astype('uint8')
+        array = tensor.detach().numpy().astype('uint8')
         if array.shape[0] == 1:
             array = array.squeeze(0)
         elif array.shape[0] == 3:

@@ -126,13 +126,14 @@ class CPDataset(data.Dataset):
         im_pose = self.transform(im_pose)
         
         # cloth-agnostic representation
-        agnostic = torch.cat([shape, im_h, pose_map], 0) 
+        agnostic = torch.cat([shape, im_h, pose_map], 0)
 
         if self.stage == 'GMM':
             im_g = Image.open('grid.png')
             im_g = self.transform(im_g)
         else:
             im_g = ''
+        
 
         result = {
             'c_name':   c_name,     # for visualization
