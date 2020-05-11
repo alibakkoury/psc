@@ -465,18 +465,12 @@ class Discriminator(nn.Module):
         super().__init__()
         self.activate = nn.Softmax()
         self.features = nn.Sequential(
-            nn.Conv2d(25,256,11,4,2),
+            nn.Conv2d(25,124,11,4,2),
             nn.ReLU(),   
             nn.MaxPool2d(2,2),
-            nn.Conv2d(256,512,5,1,2),
+            nn.Conv2d(124,256,5,1,2),
             nn.ReLU(),
-            nn.MaxPool2d(2,2),
-            nn.Conv2d(512,1024,3,1,1),
-            nn.ReLU(),
-            nn.Conv2d(1024,512,3,1,1),
-            nn.ReLU(),
-            nn.Conv2d(512,256,3,1,1),
-            nn.ReLU(),
+            nn.Conv2d(256,256,5,1,2),
             nn.AdaptiveAvgPool2d(6)
         )
 
@@ -485,8 +479,6 @@ class Discriminator(nn.Module):
             nn.Linear(256 * 6 * 6, 4096),
             nn.ReLU(inplace=True),
             nn.Dropout(),
-            nn.Linear(4096, 4096),
-            nn.ReLU(inplace=True),
             nn.Linear(4096 , 2),
         )
 
@@ -504,16 +496,18 @@ def discriminator_train_step(batch_size, discriminator, generator, d_optimizer, 
     d_optimizer.zero_grad()
 
     # train with real images
-    #real_validity = discriminator(real_images, cond)
-    real_validity = torch.index_select(discriminator(real_images, cond) , 1, torch.LongTensor([1]).cuda()).view(4)
-    print(real_validity)
-    real_loss = criterion(real_validity, Variable(torch.ones(batch_size)).cuda())
+    real = discriminator(real_images, cond)
+    size = real.size()[0]
+    real_validity = torch.index_select(real , 1, torch.LongTensor([1]).cuda()).view(size)
+    print('Reel', real_validity)
+    real_loss = criterion(real_validity, Variable(torch.ones(size)).cuda())
     
     # train with fake images
     grid , theta = generator(cond , cloth)
     fake_images = F.grid_sample(cloth, grid, padding_mode='border')
-    fake_validity = torch.index_select(discriminator(fake_images, cond) , 1, torch.LongTensor([1]).cuda()).view(4)
-    fake_loss = criterion(fake_validity, Variable(torch.zeros(batch_size)).cuda())
+    fake_validity = torch.index_select(discriminator(fake_images, cond) , 1, torch.LongTensor([1]).cuda()).view(size)
+    print('Faux' , fake_validity)
+    fake_loss = criterion(fake_validity, Variable(torch.zeros(size)).cuda())
     
     d_loss = real_loss + fake_loss
     d_loss.backward()
@@ -526,11 +520,13 @@ def generator_train_step(batch_size, discriminator, generator, g_optimizer, crit
 
     grid, theta = generator(cond, cloth)
     fake_images = F.grid_sample(cloth, grid, padding_mode='border')
-    validity = torch.index_select(discriminator(fake_images, cond) , 1, torch.LongTensor([1]).cuda()).view(4)
-    loss_gan = criterion(validity, Variable(torch.ones(batch_size)).cuda())
+    fake = discriminator(fake_images, cond)
+    size = fake.size()[0]
+    validity = torch.index_select( fake , 1, torch.LongTensor([1]).cuda()).view(size)
+    loss_gan = criterion(validity, Variable(torch.ones(size)).cuda())
     loss_l1 = lossL1(fake_images , real_images )
     loss_psc = lossPSC(fake_images , real_images , blank)
-    g_loss =  loss_l1 + loss_psc + loss_gan
+    g_loss =  0.5*loss_l1 + loss_psc + 0.25*loss_gan
     g_loss.backward()
     g_optimizer.step()
     return g_loss.data[0] , g_loss , loss_l1 , loss_psc, loss_gan
