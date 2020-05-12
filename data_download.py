@@ -41,5 +41,6 @@ tarfile.open("data/viton_resize.tar.gz").extractall(path='data/')
 shutil.move('data/data/test/', 'data/test/')
 shutil.move('data/data/train/', 'data/train/')
 
-os.rmdir('data/data/')
 os.remove('data/viton_resize.tar.gz')
+os.rmdir('data/data/')
+

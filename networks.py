@@ -465,22 +465,29 @@ class Discriminator(nn.Module):
         super().__init__()
         self.activate = nn.Softmax()
         self.features = nn.Sequential(
-            nn.Conv2d(25,124,11,4,2),
+            nn.Conv2d(25,128,11,4,2),
+            nn.BatchNorm2d(128),
             nn.ReLU(),   
             nn.MaxPool2d(2,2),
-            nn.Conv2d(124,256,5,1,2),
+            nn.Conv2d(128,256,5,1,2),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.Conv2d(256,256,5,1,2),
+            nn.BatchNorm2d(256),
             nn.AdaptiveAvgPool2d(6)
         )
+        init_weights(self.features , init_type = 'xavier')
 
         self.classifier = nn.Sequential(
             nn.Dropout(),
             nn.Linear(256 * 6 * 6, 4096),
             nn.ReLU(inplace=True),
+            nn.Linear(4096,4096),
+            nn.ReLU(inplace=True),
             nn.Dropout(),
             nn.Linear(4096 , 2),
         )
+        init_weights(self.classifier , init_type = 'xavier')
 
     def forward(self , x , cond):
         x = torch.cat([x,cond],1)
@@ -526,10 +533,10 @@ def generator_train_step(batch_size, discriminator, generator, g_optimizer, crit
     loss_gan = criterion(validity, Variable(torch.ones(size)).cuda())
     loss_l1 = lossL1(fake_images , real_images )
     loss_psc = lossPSC(fake_images , real_images , blank)
-    g_loss =  0.5*loss_l1 + loss_psc + 0.25*loss_gan
+    g_loss =  0.5*loss_l1 + (loss_l1-loss_psc) + 0.1*loss_gan
     g_loss.backward()
     g_optimizer.step()
-    return g_loss.data[0] , g_loss , loss_l1 , loss_psc, loss_gan
+    return g_loss.data[0] , g_loss , loss_l1 , loss_l1-loss_psc, loss_gan
 
 def save_checkpoint(model, save_path):
     if not os.path.exists(os.path.dirname(save_path)):
